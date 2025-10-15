@@ -1,7 +1,7 @@
 cabal-version:      2.4
 name:               haskell-gemini-bot
 version:            0.1.0.0
-author:             Your Name
+author:             Igor Volokhov
 maintainer:         your.email@example.com
 extra-source-files: CHANGELOG.md
 
@@ -10,6 +10,7 @@ executable haskell-gemini-bot
     build-depends:
         base ^>=4.18.0.0,
         telegram-bot-simple >= 0.6.0,
+        telegram-bot-api >= 7.4.5,
         process >= 1.6.9.0,
         text >= 2.0,
         filepath >= 1.4.2.1,
