@@ -14,6 +14,20 @@ then
         exit 1
     fi
 fi
-else
-    echo "gemini-cli уже установлен."
+
+# mermaid
+if ! command -v mermaid &> /dev/null
+then
+    echo "mermaid не найден. Устанавливаю..."   
+
+    npm install -g @mermaid-js/mermaid-cli@latest
+    npx puppeteer browsers install chrome-headless-shell
+
+    if command -v mermaid &> /dev/null
+    then
+        echo "mermaid установлен."
+    else
+        echo "Ошибка установки mermaid."
+        exit 1
+    fi
 fi

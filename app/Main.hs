@@ -1,15 +1,24 @@
+#!/usr/bin/env stack
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 import           Configuration.Dotenv             (loadFile, defaultConfig)
 import           Control.Monad                    (void)
 import           Control.Monad.IO.Class           (liftIO)
+import qualified Data.ByteString                  as BS
+import           Data.Default.Class               (def)
 import           Data.Text                        (Text)
 import qualified Data.Text                        as T
-import           System.Directory                 (findExecutable)
+import qualified Data.Text.IO                     as T.IO
+import           System.Directory                 (findExecutable, removeFile)
 import           System.Environment               (getEnv)
 import           System.Exit                      (ExitCode (..))
+import           System.FilePath                  (replaceExtension)
+import           System.IO                        (hClose)
+import           System.IO.Temp                   (withSystemTempFile)
 import           System.Process                   (readProcessWithExitCode)
 import           Telegram.Bot.API
+import           Telegram.Bot.API.Types
 import           Telegram.Bot.Simple
 import           Telegram.Bot.Simple.UpdateParser (updateMessageText)
 
@@ -22,46 +31,56 @@ isIrrelevant :: Text -> Bool
 isIrrelevant txt = any (`T.isInfixOf` T.strip txt) irrelevantPhrases
 
 -- | Generates a short, Mermaid-compatible ID for a task description.
--- Example: "исправление функции" -> "исправление_функции"
 generateTaskId :: Text -> Text
 generateTaskId = T.intercalate "_" . take 2 . T.words . T.toLower . T.strip
 
+-- | Creates a task item tuple (ID, Label) from a task description.
+createTaskItem :: Text -> (Text, Text)
+createTaskItem task = (generateTaskId task, T.strip task)
+
+-- | Formats a single node for the Mermaid diagram.
+formatNode :: (Text, Text) -> Text
+formatNode (id, label) = 
+  let
+    open = T.pack ['[', '"', '`']
+    close = T.pack ['`', '"', ']']
+  in "    " <> id <> open <> label <> close
+
+-- | Formats a single link for the Mermaid diagram.
+formatLink :: (Text, Text) -> (Text, Text) -> Text
+formatLink (id1, _) (id2, _) = "    " <> id1 <> " --> " <> id2
+
 -- | Builds a Mermaid flowchart string from a list of task descriptions.
 buildMermaidGraph :: [Text] -> Text
-buildMermaidGraph tasks =
-  let
-    -- Create (ID, Label) pairs for each task.
-    taskItems = map (\task -> (generateTaskId task, T.strip task)) tasks
-    -- Mermaid diagram header.
+buildMermaidGraph tasks = 
+  let 
+    taskItems = map createTaskItem tasks
     header = T.unlines
-      [ "```mermaid"
-      , "---"
+      [ "---"
       , "config:"
       , "  flowchart:"
       , "    htmlLabels: false"
       , "---"
       , "flowchart LR"
       ]
-    -- Define nodes for the graph.
-    nodes = T.unlines $ map (\(id, label) -> "    " <> id <> "[\"`" <> label <> "`\"]") taskItems
-    -- Define links between nodes.
-    links = T.unlines $ zipWith (\(id1, _) (id2, _) -> "    " <> id1 <> " --> " <> id2) taskItems (tail taskItems)
-    footer = "```"
-  in header <> nodes <> links <> footer
+    nodes = T.unlines $ map formatNode taskItems
+    links = T.unlines $ zipWith formatLink taskItems (tail taskItems)
+  in header <> nodes <> links
 
 -- | Processes a text message to see if it's a brainstorm session that can be
 -- turned into a Mermaid diagram.
 processBrainstorm :: Text -> Maybe Text
-processBrainstorm txt =
-  -- Split the message by commas to get individual tasks.
-  let tasks = map T.strip $ T.splitOn "," txt
-      -- Filter out any irrelevant tasks.
-      relevantTasks = filter (not . isIrrelevant) tasks
-  in
-    -- Only generate a diagram if there are two or more relevant tasks.
-    if length relevantTasks > 1
+processBrainstorm txt = 
+  let 
+    cleanedTxt = T.strip $ T.replace "/plan" "" txt
+    tasks = map T.strip $ T.splitOn "," cleanedTxt
+    relevantTasks = filter (not . T.null) $ filter (not . isIrrelevant) tasks
+  in 
+    if length relevantTasks > 1 
     then Just (buildMermaidGraph relevantTasks)
     else Nothing
+
+data BotState = BotState { mmdcExecutable :: Maybe FilePath }
 
 data Action
   = NoAction
@@ -71,11 +90,10 @@ data Action
 geminiModel :: String
 geminiModel = "gemini-2.5-flash"
 
-bot :: BotApp () Action
+bot :: BotApp BotState Action
 bot = BotApp
-  {
-    botInitialModel = ()
-  , botAction = \update _model ->
+  { botInitialModel = BotState { mmdcExecutable = Nothing }
+  , botAction = \update _model -> 
       case (updateMessageText update, updateChatId update) of
         (Just txt, Just chatId) -> Just (Reply chatId txt)
         _                       -> Nothing
@@ -83,25 +101,50 @@ bot = BotApp
   , botHandler = \action model -> case action of
       NoAction -> pure model
       Reply chatId txt -> model <# do
-        -- Try to process the message as a brainstorm session first.
-        case processBrainstorm txt of
-          -- If it's a brainstorm, send the generated Mermaid diagram.
-          Just mermaidGraph -> do
-            void $ reply (toReplyMessage "Создал для вас диаграмму:")
-            void $ reply (toReplyMessage mermaidGraph)
-          -- Otherwise, fall back to the default Gemini AI handler.
+        case processBrainstorm txt of 
+          Just mermaidGraph -> 
+            case mmdcExecutable model of 
+              Just mmdc -> replyWithMermaidImage chatId mmdc mermaidGraph
+              Nothing   -> do
+                void $ reply (toReplyMessage "Диаграмма (mmdc не найден, отправляю текстом):")
+                void $ reply (toReplyMessage ("```mermaid\n" <> mermaidGraph <> "\n```"))
           Nothing -> do
             void $ reply (toReplyMessage "🧠 Думаю над вашим запросом...")
             (exitCode, stdout, stderr) <- liftIO $ callGeminiCLI (T.unpack txt)
-            let replyTextMsg = case exitCode of
+            let replyTextMsg = case exitCode of 
                   ExitSuccess   -> T.pack stdout
                   ExitFailure _ -> T.pack $ "Произошла ошибка: " ++ stderr
             void $ reply (toReplyMessage replyTextMsg)
   , botJobs = []
   }
 
+replyWithMermaidImage :: ChatId -> FilePath -> Text -> BotM ()
+replyWithMermaidImage chatId mmdcPath mermaidTxt = do
+  void $ reply (toReplyMessage "Генерирую диаграмму...")
+  liftIO (withSystemTempFile "diagram.mmd" $ \mmdPath h -> do
+    T.IO.hPutStr h mermaidTxt
+    hClose h
+    let pngPath = replaceExtension mmdPath ".png"
+    (exitCode, stdout, stderr) <- readProcessWithExitCode mmdcPath ["-i", mmdPath, "-o", pngPath, "-b", "transparent"] ""
+    case exitCode of 
+      ExitSuccess -> pure (Right pngPath)
+      ExitFailure _ -> pure (Left (stdout ++ stderr))
+    ) >>= \case
+      Left err -> void $ reply (toReplyMessage (T.pack $ "Ошибка генерации PNG: " ++ err))
+      Right pngPath -> do
+        let photo = SendPhotoRequest
+              { sendPhotoChatId = SomeChatId chatId
+              , sendPhotoPhoto = PhotoFile pngPath "image/png"
+              , sendPhotoCaption = Nothing
+              , sendPhotoDisableNotification = Nothing
+              , sendPhotoReplyToMessageId = Nothing
+              , sendPhotoReplyMarkup = Nothing
+              }
+        _ <- liftClientM $ sendPhoto photo
+        liftIO $ removeFile pngPath
+
 callGeminiCLI :: String -> IO (ExitCode, String, String)
-callGeminiCLI prompt =
+callGeminiCLI prompt = 
   readProcessWithExitCode "gemini" ["-m", geminiModel, "-p", prompt] ""
 
 main :: IO ()
@@ -113,16 +156,24 @@ main = do
 
   putStrLn "1. Проверка наличия `gemini-cli`..."
   geminiPath <- findExecutable "gemini"
-  case geminiPath of
-    Nothing ->
+  case geminiPath of 
+    Nothing -> 
       putStrLn "[ОШИБКА] Утилита `gemini` не найдена в вашем PATH. Установите ее: npm install -g @google/gemini-cli@latest"
     Just path -> do
       putStrLn $ "   `gemini` найден: " ++ path
+
+      putStrLn "1.1. Проверка наличия `mmdc` (Mermaid CLI)..."
+      mmdcPath <- findExecutable "mmdc"
+      case mmdcPath of 
+        Nothing -> putStrLn "[ПРЕДУПРЕЖДЕНИЕ] Утилита `mmdc` не найдена. Диаграммы будут отправляться как текст. Установите ее: npm install -g @mermaid-js/mermaid-cli"
+        Just mmdc -> putStrLn $ "   `mmdc` найден: " ++ mmdc
 
       putStrLn "2. Получение токена Telegram..."
       putStrLn "   (Используется переменная TELEGRAM_BOT_TOKEN из файла .env)"
       token <- Token . T.pack <$> getEnv "TELEGRAM_BOT_TOKEN"
 
+      let model = BotState { mmdcExecutable = mmdcPath }
+
       env <- defaultTelegramClientEnv token
       putStrLn "3. Запуск бота... (Нажмите Ctrl+C для остановки)"
-      startBot_ bot env
+      startBot_ (bot { botInitialModel = model }) env
