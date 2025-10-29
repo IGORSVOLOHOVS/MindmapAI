@@ -1,125 +1,115 @@
-Конечно, вот профессионально оформленный README.md файл для вашего проекта. Он содержит всю необходимую информацию для установки, настройки и запуска.
+# MindmapAI
+
+A simple yet powerful **Python Telegram Bot** that leverages **Google's Gemini AI** to transform unstructured text plans into clear, visual mind maps and provides general AI-powered Q\&A functionality.
 
 -----
 
-# Haskell Gemini AI Telegram Bot
+## 🚀 Features
 
-Простой, но мощный Telegram-бот, написанный на **Haskell**, который служит мостом к Google's Gemini AI через официальный `gemini-cli`. Вы отправляете боту текстовое сообщение, он передает его в командную строку Gemini и возвращает вам сгенерированный ответ.
-
------
-
-## 🚀 Особенности
-
-  - **Прямое взаимодействие с Gemini**: Получайте ответы от модели `gemini-2.5-flash` прямо в вашем Telegram чате.
-  - **Простота**: Минималистичная кодовая база, сфокусированная на одной задаче.
-  - **Асинхронность**: Построен на проверенной библиотеке `telegram-bot-simple`.
-  - **Безопасность**: Конфигурация через `.env` файл для защиты ваших секретных токенов.
-  - **Надежная сборка**: Использует `cabal` для управления зависимостями и сборки проекта.
+  * **AI-Powered Planning (`/plan`)**: Uses the **Gemini 2.5 Flash model** to analyze user text, filter out irrelevant details, and extract a clean list of actionable tasks suitable for a mind map.
+  * **Visual Mind Map Generation**: Automatically converts the structured task list into a directional **mind map diagram** using the **Graphviz** library (`dot` utility).
+  * **General Q\&A (`/ask`)**: Serves as a direct interface to the Gemini CLI for any general questions.
+  * **Asynchronous & Robust**: Built on the modern `python-telegram-bot` framework with `asyncio`.
+  * **Secure Configuration**: Uses the `.env` file for storing the sensitive Telegram Bot Token.
 
 -----
 
-## 📋 Требования (Prerequisites)
+## 📋 Prerequisites
 
-Перед началом убедитесь, что у вас установлены следующие компоненты:
+Ensure the following components are installed on your system before setup:
 
-1.  **GHC (Glasgow Haskell Compiler)**: `version 9.6.6` или новее.
-2.  **Cabal**: `version 3.10.3.0` или новее.
-3.  **Node.js и NPM**: Необходимы для установки `gemini-cli`.
-4.  **Google Gemini CLI**: Сам интерфейс командной строки для Gemini.
+1.  **Python 3.8+**
+2.  **Google Gemini CLI**: The command-line interface for Google Gemini.
+    ```bash
+    npm install -g @google/gemini-cli@latest
+    ```
+3.  **Graphviz (`dot`)**: The underlying utility required by the `graphviz` Python library to generate PNG images from the diagram code. Install it via your system's package manager (e.g., `sudo apt install graphviz` on Debian/Ubuntu or `brew install graphviz` on macOS).
 
-Если `gemini-cli` не установлен, откройте терминал и выполните команду:
+-----
+
+## 🛠️ Installation and Setup
+
+Follow these steps to get your bot up and running.
+
+### 1\. Clone the Repository
 
 ```bash
-npm install -g @google/gemini-cli@latest
+git clone https://github.com/IGORSVOLOHOVS/MindmapAI.git
+cd MindmapAI
 ```
 
------
+### 2\. Install Python Dependencies
 
-## 🛠️ Установка и настройка
-
-Выполните следующие шаги, чтобы подготовить проект к запуску.
-
-### 1\. Клонирование репозитория (если есть)
-
-Если проект находится в Git, клонируйте его. Если нет, просто создайте папку с файлами из предыдущих шагов.
+It is highly recommended to use a Python virtual environment.
 
 ```bash
-git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ>
-cd haskell-gemini-bot
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows, use 'venv\Scripts\activate'
+
+# Install project dependencies
+pip install -r requirements.txt
 ```
 
-### 2\. Настройка переменных окружения
+The required dependencies are: `python-dotenv`, `python-telegram-bot`, `graphviz`, and `httpx`.
 
-Бот использует `.env` файл для хранения вашего токена Telegram. Это безопасно и удобно.
+### 3\. Configure Environment Variables
 
-  - Создайте файл с именем `.env` в корневой папке проекта.
-  - Скопируйте в него следующее содержимое и вставьте ваш токен.
+The bot requires your Telegram Bot Token.
+
+  - Create a file named `.env` in the root directory of the project.
+  - Add your token in the following format:
 
 **`.env`**
 
 ```env
-# Переменные окружения для Telegram-бота
-# Этот файл НИКОГДА не должен попадать в систему контроля версий (Git).
+# Environment variables for the Telegram Bot
 
-TELEGRAM_BOT_TOKEN="ВАШ:СУПЕР_СЕКРЕТНЫЙ_ТЕЛЕГРАМ_ТОКЕН"
+# Get your token from BotFather on Telegram
+TELEGRAM_BOT_TOKEN="YOUR:SUPER_SECRET_TELEGRAM_TOKEN"
 ```
 
-### 3\. (Настоятельно рекомендуется) Настройка `.gitignore`
-
-Чтобы случайно не загрузить ваш `.env` файл в Git, убедитесь, что ваш `.gitignore` файл содержит следующую строку:
-
-```gitignore
-.env
-```
+*(Note: Your `.gitignore` file correctly ensures this file is not committed to Git.)*
 
 -----
 
-## ▶️ Запуск бота
+## ▶️ Running the Bot
 
-После завершения настройки запустить бота очень просто.
+Once all prerequisites and setup steps are complete, you can start the bot.
 
-1.  Откройте терминал в корневой директории проекта.
-2.  Выполните команду `cabal run`.
+1.  Open your terminal in the project's root directory.
+2.  Execute the main application file:
 
 <!-- end list -->
 
 ```bash
-cabal run
+python app/bot.py
 ```
 
-Cabal автоматически установит все Haskell-зависимости, скомпилирует проект и запустит исполняемый файл. При первом запуске это может занять несколько минут.
+You should see log output indicating that the bot has successfully loaded the token, checked for the necessary CLI tools (`gemini` and `dot`), set up the handlers, and started polling.
 
-Вы должны увидеть в консоли следующее:
+### ⏹️ Usage Commands
 
-```
---- Запуск Haskell Gemini AI Bot ---
-0. Загрузка переменных из файла .env...
-1. Проверка наличия `gemini-cli`...
-   `gemini` найден: /path/to/your/gemini
-2. Получение токена Telegram...
-   (Используется переменная TELEGRAM_BOT_TOKEN из файла .env)
-3. Запуск бота... (Нажмите Ctrl+C для остановки)
-```
+  * **/plan**: Starts a conversation to generate a mind map. Send the bot a list of tasks, to-dos, or a detailed plan. Gemini will filter and structure it, and the bot will send back a visual diagram.
+  * **/ask**: Starts a conversation for a general question. The bot will pass your text directly to Gemini and return the full answer.
+  * **/cancel**: Stops the current `/plan` or `/ask` conversation.
 
-Теперь бот активен\! Вы можете найти его в Telegram ([t.me/HaskellGeminiAI\_bot](https://www.google.com/search?q=http://t.me/HaskellGeminiAI_bot)) и начать отправлять ему сообщения.
+### ⚙️ Fallback
 
-### ⏹️ Остановка бота
-
-Чтобы остановить работу бота, вернитесь в окно терминала, где он запущен, и нажмите `Ctrl + C`.
+If the `dot` utility (Graphviz) is not found on your system, the bot will still process the plan using Gemini but will send the results back as a plain text list.
 
 -----
 
-## ⚙️ Структура проекта
+## 📁 Project Structure
 
 ```
-haskell-gemini-bot/
+MindmapAI/
 │
 ├── app/
-│   └── Main.hs             # Основной и единственный исходный файл бота
+│   └── bot.py              # Main Python bot logic and handlers
 │
-├── haskell-gemini-bot.cabal # Файл конфигурации проекта для Cabal
-│
-├── .env                    # Ваш секретный токен (не для Git)
-│
-└── .gitignore              # Указывает Git игнорировать .env
+├── requirements.txt        # Python dependencies
+├── gemini-cli-install.sh   # Helper script for installing gemini-cli
+├── .env                    # Environment variables (secret)
+└── .gitignore              # Ensures .env is ignored
 ```
