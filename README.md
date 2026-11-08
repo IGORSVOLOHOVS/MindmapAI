@@ -1,115 +1,27 @@
-# MindmapAI
+# mindmap-ai
 
-A simple yet powerful **Python Telegram Bot** that leverages **Google's Gemini AI** to transform unstructured text plans into clear, visual mind maps and provides general AI-powered Q\&A functionality.
+A Telegram bot that turns a written plan into a mind-map picture and answers questions, with the Google Gemini CLI doing the language work.
 
------
+- **/plan** asks for a plan in free text. Gemini keeps only the actionable tasks and gives each a short label; the bot draws them as a chain of boxes with Graphviz and sends the PNG back. Without Graphviz's `dot` on the machine it sends the tasks as a text list instead.
+- **/ask** passes a question straight to Gemini and sends back the answer.
+- **/cancel** ends a `/plan` or `/ask` conversation.
 
-## 🚀 Features
+Any other message gets a pointer to the two commands.
 
-  * **AI-Powered Planning (`/plan`)**: Uses the **Gemini 2.5 Flash model** to analyze user text, filter out irrelevant details, and extract a clean list of actionable tasks suitable for a mind map.
-  * **Visual Mind Map Generation**: Automatically converts the structured task list into a directional **mind map diagram** using the **Graphviz** library (`dot` utility).
-  * **General Q\&A (`/ask`)**: Serves as a direct interface to the Gemini CLI for any general questions.
-  * **Asynchronous & Robust**: Built on the modern `python-telegram-bot` framework with `asyncio`.
-  * **Secure Configuration**: Uses the `.env` file for storing the sensitive Telegram Bot Token.
+## Use
 
------
-
-## 📋 Prerequisites
-
-Ensure the following components are installed on your system before setup:
-
-1.  **Python 3.8+**
-2.  **Google Gemini CLI**: The command-line interface for Google Gemini.
-    ```bash
-    npm install -g @google/gemini-cli@latest
-    ```
-3.  **Graphviz (`dot`)**: The underlying utility required by the `graphviz` Python library to generate PNG images from the diagram code. Install it via your system's package manager (e.g., `sudo apt install graphviz` on Debian/Ubuntu or `brew install graphviz` on macOS).
-
------
-
-## 🛠️ Installation and Setup
-
-Follow these steps to get your bot up and running.
-
-### 1\. Clone the Repository
-
-```bash
-git clone https://github.com/IGORSVOLOHOVS/MindmapAI.git
-cd MindmapAI
+```powershell
+.\recipe.ps1 run
 ```
 
-### 2\. Install Python Dependencies
+The bot reads `TELEGRAM_BOT_TOKEN` from the environment or from a `.env` file in the working folder, and calls `gemini` and `dot` from PATH. It polls Telegram until it is stopped with Ctrl+C, restarts itself 15 seconds after a crash, and writes one log file per session under `~/.mindmap-ai/logs`.
 
-It is highly recommended to use a Python virtual environment.
+`docs/install.md` says what to install and `docs/manual.md` describes every command. `.\recipe.ps1 test` runs the tests, mypy and ruff; the tests replace the Gemini CLI and Telegram with fakes, so they need neither the network nor a key.
 
-```bash
-# Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows, use 'venv\Scripts\activate'
+## Licence
 
-# Install project dependencies
-pip install -r requirements.txt
-```
+MIT, see `LICENSE`.
 
-The required dependencies are: `python-dotenv`, `python-telegram-bot`, `graphviz`, and `httpx`.
+## Lab requirements
 
-### 3\. Configure Environment Variables
-
-The bot requires your Telegram Bot Token.
-
-  - Create a file named `.env` in the root directory of the project.
-  - Add your token in the following format:
-
-**`.env`**
-
-```env
-# Environment variables for the Telegram Bot
-
-# Get your token from BotFather on Telegram
-TELEGRAM_BOT_TOKEN="YOUR:SUPER_SECRET_TELEGRAM_TOKEN"
-```
-
-*(Note: Your `.gitignore` file correctly ensures this file is not committed to Git.)*
-
------
-
-## ▶️ Running the Bot
-
-Once all prerequisites and setup steps are complete, you can start the bot.
-
-1.  Open your terminal in the project's root directory.
-2.  Execute the main application file:
-
-<!-- end list -->
-
-```bash
-python app/bot.py
-```
-
-You should see log output indicating that the bot has successfully loaded the token, checked for the necessary CLI tools (`gemini` and `dot`), set up the handlers, and started polling.
-
-### ⏹️ Usage Commands
-
-  * **/plan**: Starts a conversation to generate a mind map. Send the bot a list of tasks, to-dos, or a detailed plan. Gemini will filter and structure it, and the bot will send back a visual diagram.
-  * **/ask**: Starts a conversation for a general question. The bot will pass your text directly to Gemini and return the full answer.
-  * **/cancel**: Stops the current `/plan` or `/ask` conversation.
-
-### ⚙️ Fallback
-
-If the `dot` utility (Graphviz) is not found on your system, the bot will still process the plan using Gemini but will send the results back as a plain text list.
-
------
-
-## 📁 Project Structure
-
-```
-MindmapAI/
-│
-├── app/
-│   └── bot.py              # Main Python bot logic and handlers
-│
-├── requirements.txt        # Python dependencies
-├── gemini-cli-install.sh   # Helper script for installing gemini-cli
-├── .env                    # Environment variables (secret)
-└── .gitignore              # Ensures .env is ignored
-```
+This repository complies with [revision 4.0.0](http://127.0.0.1:3000/igors-lab/software-requirements/src/tag/v4.0.0/BEST_REQUIREMENTS.md) of the lab requirements, except R-02 (#8), R-09 (#9), R-37 (#10), R-41 (#11), R-42 (#12).
