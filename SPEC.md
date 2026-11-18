@@ -7,6 +7,26 @@ Statements about library behaviour come from reading the library sources install
 the documenting machine (python-telegram-bot 22.6, python-dotenv 1.1.0). They are
 labelled as such.
 
+<!-- jira-sync:start -->
+Jira: KAN-89
+
+## Tasks
+
+This list is one ticket in Jira project KAN, [KAN-89](https://igorsvolohovs.atlassian.net/browse/KAN-89). Each line is a checkbox there: tick it in Jira and the sync ticks it here; add a checkbox there and it is appended here. Done items are the features described in section 3; open items are what the project declares but the code does not do yet.
+
+- [x] Startup and lifecycle (section 3.1) <!-- spec-startup-and-lifecycle -->
+- [x] `/plan`: plan to diagram (section 3.2) <!-- spec-plan-plan-to-diagram -->
+- [x] `/ask`: general question (section 3.3) <!-- spec-ask-general-question -->
+- [x] Gemini CLI invocation (section 3.4) <!-- spec-gemini-cli-invocation -->
+- [x] Other messages and errors (section 3.5) <!-- spec-other-messages-and-errors -->
+- [ ] "directional mind map diagram" (declared, not implemented) <!-- spec-directional-mind-map-diagram -->
+- [ ] Bot can be stopped with Ctrl+C ("Press Ctrl+C to stop", `except KeyboardInterrupt`) (declared, not implemented) <!-- spec-bot-can-be-stopped-with-ctrl-c-press-ctrl-c-to-sto -->
+- [ ] Mermaid CLI and headless Chrome as installation steps (declared, not implemented) <!-- spec-mermaid-cli-and-headless-chrome-as-installation-st -->
+- [ ] `python-telegram-bot[job-queue]` and `httpx` dependencies (declared, not implemented) <!-- spec-python-telegram-botjob-queue-and-httpx-dependencie -->
+- [ ] `.env` shown as part of the project tree (declared, not implemented) <!-- spec-env-shown-as-part-of-the-project-tree -->
+
+<!-- jira-sync:end -->
+
 ## 1. Purpose and scope
 
 MindmapAI is a Telegram bot. It turns free-form plan text into a task diagram, and it
